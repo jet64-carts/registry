@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jet64-carts/registry/schema/registry-v1.schema.json",
+  "title": "Jet64 registry entry — carts/<id>.toml (schema 1)",
+  "description": "One cart's curator-owned registry entry (docs/cart_exchange/cart_exchange.md §6.2). Documentation of the contract the jcx_validator crate enforces — the crate is authoritative. name, license, and diz are curator-committed copies of facts that originate in the cart's own release, and CI proves them byte-honest against the fetched archive so the index can render every screen without ever fetching one (§6.3).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "name", "summary", "author", "license", "categories", "repository", "releases"],
+  "properties": {
+    "schema": { "const": 1 },
+    "id": {
+      "type": "string",
+      "description": "The cart's permanent identity; the file must be named <id>.toml.",
+      "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+    },
+    "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "summary": {
+      "type": "string",
+      "description": "One plain sentence for the listing row (single line).",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "author": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "license": {
+      "type": "string",
+      "description": "SPDX expression from the allowlist (§6.4), equal to the latest release's manifest."
+    },
+    "categories": {
+      "type": "array",
+      "description": "1–4 unique lowercase slugs of curator vocabulary.",
+      "minItems": 1,
+      "maxItems": 4,
+      "items": { "type": "string", "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", "maxLength": 24 }
+    },
+    "repository": {
+      "type": "string",
+      "description": "https://<forge>/<owner>/<name> on a supported forge (github.com, gitlab.com). For forge-scoped ids the owner must be the namespace's account (E19).",
+      "pattern": "^https://"
+    },
+    "provenance": {
+      "type": "string",
+      "description": "E19 evidence for a namespace no forge can prove mechanically, or for an entry a maintainer files on an author's behalf."
+    },
+    "diz": {
+      "type": "string",
+      "description": "The author's file_id.diz, verbatim: at most 10 lines of at most 45 printable columns."
+    },
+    "releases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version", "revision", "source", "sha256", "tree_sha256", "archive_bytes", "expanded_bytes", "jet64_api", "network", "published"],
+        "properties": {
+          "version": { "type": "string", "description": "SemVer; unique within the entry. (id, version, tree_sha256) is immutable once accepted (E20)." },
+          "revision": {
+            "type": "string",
+            "description": "Full commit hash — never a branch or floating tag (E2).",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "source": {
+            "type": "string",
+            "description": "The canonical forge archive URL derived from repository + revision (§6.5.2); for an unavailable release only, an audited https mirror whose tree fingerprint CI proved identical (§6.7).",
+            "pattern": "^https://"
+          },
+          "sha256": {
+            "type": "string",
+            "description": "SHA-256 of the archive bytes — transport integrity; re-pinnable only via the audited §7.5 path.",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "tree_sha256": {
+            "type": "string",
+            "description": "The E20 tree fingerprint of the release surface — content identity; never changes.",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "archive_bytes": { "type": "integer", "minimum": 1, "maximum": 33554432 },
+          "expanded_bytes": { "type": "integer", "minimum": 1, "maximum": 100663296 },
+          "jet64_api": { "type": "integer", "minimum": 1 },
+          "network": { "type": "boolean", "description": "CI-verified against the include tree (§6.5.7)." },
+          "published": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+          "yanked": { "type": "boolean", "default": false, "description": "Removed from default discovery — something was wrong (§6.7)." },
+          "unavailable": { "type": "boolean", "default": false, "description": "Upstream gone, nothing wrong — mirror rules in §6.7." }
+        }
+      }
+    }
+  }
+}

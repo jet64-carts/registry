@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "generated": "2026-10-12",
+  "bulletin": "The board is young. Publish small, sign your\nwork, be kind. -- D.\n",
+  "boards": [],
+  "carts": [
+    {
+      "id": "io.github.jet64-carts.jetchess",
+      "name": "JetChess",
+      "summary": "A real chess engine on a fantasy console — ninety openings, and pieces you pick up off the board.",
+      "author": "73v3",
+      "license": "MIT",
+      "categories": [
+        "strategy",
+        "board-game"
+      ],
+      "repository": "https://github.com/jet64-carts/jetchess",
+      "diz": "JETCHESS v1.0 -- a chess machine for the\nJet64 console. A real engine on a worker\nthread, ninety named openings, algebraic\nnotation, and pieces you pick up off the\nboard. Three opponents, from easily led\nto hard to beat. Free forever. -- 73v3\n",
+      "releases": [
+        {
+          "version": "1.0.0",
+          "revision": "0a114689f2799ddecd608452b07565155f5a843a",
+          "source": "https://github.com/jet64-carts/jetchess/archive/0a114689f2799ddecd608452b07565155f5a843a.tar.gz",
+          "sha256": "f4f33c11fc6174c2bb53d693677ce385ad575d980cb81134f29d3ced0d6af4bd",
+          "tree_sha256": "79f35b1141b3cd6b8a401e8ef9cfbd8e0d15d47a0ee440b47bc710f62c748726",
+          "archive_bytes": 278728,
+          "expanded_bytes": 5843388,
+          "jet64_api": 11,
+          "network": false,
+          "published": "2026-10-12",
+          "yanked": false,
+          "unavailable": false,
+          "screenshot": {
+            "sha256": "9dcf235dda14146ecee3444234ef9253fe86f0d1fb47f403542151cddc0a8a06",
+            "bytes": 100314,
+            "width": 1280,
+            "height": 720
+          }
+        }
+      ]
+    },
+    {
+      "id": "io.github.jet64-carts.mandelbrot",
+      "name": "Mandelbrot",
+      "summary": "The Mandelbrot set, explored live at 120 Hz — drag and dive to a magnification of 10^260, every pixel exact or proven.",
+      "author": "73v3",
+      "license": "MIT",
+      "categories": [
+        "mathematics",
+        "fractal",
+        "toy"
+      ],
+      "repository": "https://github.com/jet64-carts/mandelbrot",
+      "diz": "MANDELBROT v1.0 -- the Mandelbrot set,\nexplored live at 120 Hz. Drag it, wheel\ninto it: each new view lands whole in\nthe tick you ask for it, then sharpens\nto the last pixel -- at home or 10^260\ndeep, every pixel exact or proven by\ntheorem. Bookmarks that fly, gradients\nthat cycle. Free forever. -- 73v3\n",
+      "releases": [
+        {
+          "version": "1.0.0",
+          "revision": "cf875e8af9e84c5f529a58c0b24f15365a18cb33",
+          "source": "https://github.com/jet64-carts/mandelbrot/archive/cf875e8af9e84c5f529a58c0b24f15365a18cb33.tar.gz",
+          "sha256": "97cde7e8ef09deb56ddafa0dd05c455709a3bab6c6abf651c64b81044e59682b",
+          "tree_sha256": "7090530129c17f627ee5d01031988f57cea13fa96cee43a03d41560da4e5f30d",
+          "archive_bytes": 384478,
+          "expanded_bytes": 4779665,
+          "jet64_api": 11,
+          "network": false,
+          "published": "2026-10-12",
+          "yanked": false,
+          "unavailable": false,
+          "screenshot": {
+            "sha256": "a259a44c1a07ed3d8055ce513ac965e06b9b5320b760ba8385c41445cff42f7b",
+            "bytes": 229425,
+            "width": 960,
+            "height": 540
+          }
+        }
+      ]
+    }
+  ]
+}

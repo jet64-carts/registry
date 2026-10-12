@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jet64-carts/registry/schema/cart-v1.schema.json",
+  "title": "Jet64 cart.toml (schema 1)",
+  "description": "The author-owned package manifest at a cart's root (docs/cart_exchange/cart_exchange.md §5.2). Documentation of the contract the jcx_validator crate enforces — the crate is authoritative. By design there is no build, command, script, url, flags, or hook field, and unknown keys are rejected: a field that would smuggle behaviour cannot be written down.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "name", "version", "jet64_api", "license"],
+  "properties": {
+    "schema": { "const": 1 },
+    "id": {
+      "type": "string",
+      "description": "Permanent reverse-DNS-style identity, e.g. io.github.mira.space-hauler. Lowercase ASCII letters, digits, dots, hyphens; 3–128 bytes; at least two dot-separated segments, each starting and ending alphanumeric. Never recycled.",
+      "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$",
+      "minLength": 3,
+      "maxLength": 128
+    },
+    "name": {
+      "type": "string",
+      "description": "Display title (mutable, non-unique).",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "version": {
+      "type": "string",
+      "description": "SemVer, e.g. 1.2.0."
+    },
+    "jet64_api": {
+      "type": "integer",
+      "description": "Minimum JET64_API_GENERATION the cart requires (E9) — a single monotone integer, never below the generation (api_generations.toml) of an API name the cart's source uses.",
+      "minimum": 1
+    },
+    "license": {
+      "type": "string",
+      "description": "One SPDX id from the registry allowlist (§6.4), or several joined by ' OR '."
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "include": {
+          "type": "array",
+          "description": "Narrows the release surface (applied by pruning after extraction). '/'-separated patterns: '**' spans directories, '*' matches within a segment, '?' one character. Relative only; no '.', '..', or empty segments. cart.toml is always implicitly included.",
+          "items": { "type": "string", "minLength": 1, "maxLength": 200 }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "network": {
+          "type": "boolean",
+          "description": "Whether the cart has network reach — dialling out (jet_net.h / jet_http.h / jet_ws.h) or answering (jet_http_serve.h). CI verifies this against the include tree in both directions; the declaration informs review and the INFO screen, and grants nothing.",
+          "default": false
+        },
+        "clipboard": {
+          "type": "boolean",
+          "description": "Whether the cart can read and write the player's clipboard (jet_clipboard.h) — only ever on the player's own copy and paste keys. CI verifies this against the include tree in both directions; the declaration informs review and the INFO screen, and grants nothing.",
+          "default": false
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+# validator/Cargo.toml
+#
+# The Cartridge Exchange's shared acceptance policy (docs/cart_exchange/cart_exchange.md E6): one
+# open crate holding the manifest schema, archive hygiene, file allowlist, forbidden-
+# symbol policy, and the tree fingerprint — used by registry CI *and* the Workstation
+# installer, so the acceptance rules can never drift between server and client.
+#
+# Home: `validator/` inside the public `jet64-carts/registry` repository. Until that
+# repository's first push it is staged in the closed tree under `registry/` as a
+# workspace member; afterwards the workstation re-pins to it by git revision.
+[package]
+name = "jcx_validator"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Jet64 Cartridge Exchange validator: manifest schema, archive hygiene, policy scan, and tree fingerprint"
+
+[[bin]]
+name = "jcx"
+required-features = ["cli"]
+
+[features]
+# The `jcx` command-line tool (`validate` for CI, `prepare` for authors — E21). Only
+# `prepare` performs network fetches, so `ureq` rides this feature; the library API is
+# network-free by construction. Default-on so a plain `cargo build` produces the tool;
+# the Workstation depends on the library with `default-features = false`.
+default = ["cli"]
+cli = ["dep:ureq"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"   # the generated index-v1.json (§6.3) — written and read as one schema
+toml = "0.8"
+semver = { version = "1.0", features = ["serde"] }
+sha2 = "0.10"
+tar = "0.4"
+flate2 = "1"
+# Same rustls-backed configuration as the workstation's own fetch path — no
+# system-OpenSSL variance (docs/workstation_export.md §5.9 R10).
+ureq = { version = "2", default-features = false, features = ["tls"], optional = true }

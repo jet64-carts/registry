@@ -1,0 +1,91 @@
+# .github/workflows/ci.yml — registry CI (docs/cart_exchange/cart_exchange.md §6.5)
+#
+# The same jcx_validator crate the Jet64 Workstation pins runs here, so the
+# acceptance rules cannot drift between server and client (E6). Pull requests
+# get the full pass: offline rules, immutability against the base commit,
+# fetch-witnessing of every new-or-changed release, and the per-unit clang
+# syntax check against the published runtime headers (§6.5.9). Pushes to main
+# re-run the offline rules as a standing invariant.
+name: registry-ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the submission
+        uses: actions/checkout@v4
+        with:
+          path: head
+
+      - name: Check out the accepted state
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+
+      # rustup honours head/rust-toolchain.toml, so the pinned toolchain is
+      # installed on first use — no separate setup action to drift.
+      - name: Validator self-tests
+        working-directory: head
+        run: cargo test --manifest-path validator/Cargo.toml --all-targets
+
+      - name: Zero-warning clippy
+        working-directory: head
+        run: cargo clippy --manifest-path validator/Cargo.toml --all-targets -- -D warnings
+
+      # E19: which organisations does the submitter publicly belong to? An
+      # org-scoped namespace (io.github.<org>.*) accepts a PR from any public
+      # member; jcx weighs the list, this step only gathers it.
+      - name: Resolve submitter organisations
+        if: github.event_name == 'pull_request'
+        id: orgs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          orgs="$(gh api "users/${{ github.actor }}/orgs" --jq '[.[].login] | join(",")' || true)"
+          echo "list=${orgs}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify the registry (full pass with fetch witnessing)
+        if: github.event_name == 'pull_request'
+        working-directory: head
+        run: |
+          cargo run --manifest-path validator/Cargo.toml -- verify . \
+            --base ../base \
+            --fetch --keep-trees ../release-trees \
+            --pr-author "${{ github.actor }}" \
+            --author-orgs "${{ steps.orgs.outputs.list }}"
+
+      - name: Verify the registry (offline invariants)
+        if: github.event_name == 'push'
+        working-directory: head
+        run: cargo run --manifest-path validator/Cargo.toml -- verify .
+
+      # §6.5.9 — the house bar, applied to every fetched release surface:
+      # each C unit must be warning-free against the published runtime headers.
+      - name: Syntax-check release surfaces
+        if: github.event_name == 'pull_request'
+        working-directory: head
+        run: |
+          shopt -s nullglob
+          status=0
+          for tree in ../release-trees/*/; do
+            echo "== ${tree}"
+            while IFS= read -r -d '' unit; do
+              echo "   clang -fsyntax-only ${unit#"${tree}"}"
+              clang -fsyntax-only -std=c11 -Wall -Wextra -Wshadow -Wpedantic -Werror \
+                -I headers -I "${tree}" "${unit}" || status=1
+            done < <(find "${tree}" -name '*.c' -print0 | sort -z)
+          done
+          exit "${status}"

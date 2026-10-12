@@ -1,0 +1,171 @@
+# policy.toml
+# GENERATED from the Jet64 workstation sandbox policy (src/core/guest/compiler.rs,
+# FORBIDDEN_C_FUNCTIONS). Do not edit by hand: the closed repository's E7 equality
+# test renders this file from the compiler's own table and fails the build on any
+# drift — the sandbox and the registry can therefore never disagree about what a
+# cart may name. Regenerate by running that test and pasting its expected output.
+schema = 1
+
+[kinds.host-memory-and-files]
+remedy = "Memory comes from WRAM (jet_memory.h, jet_pool.h) and persistence from the jet_io.h AppData sandbox — never from host allocation or raw file IO."
+
+[kinds.os-escape]
+remedy = "Process control and inline assembly have no place inside the console; the jet_ API is the whole machine a cart may touch."
+
+[kinds.raw-socket]
+remedy = "Networking is available, but only through the opt-in jet_net.h / jet_http.h / jet_ws.h API — never through raw OS sockets. If this is your OWN function rather than the OS one, give it a prefix (e.g. 'player_send') and it is fine."
+
+[[forbidden]]
+symbol = "malloc"
+kind = "host-memory-and-files"
+requires_call = false
+
+[[forbidden]]
+symbol = "calloc"
+kind = "host-memory-and-files"
+requires_call = false
+
+[[forbidden]]
+symbol = "realloc"
+kind = "host-memory-and-files"
+requires_call = false
+
+[[forbidden]]
+symbol = "free"
+kind = "host-memory-and-files"
+requires_call = false
+
+[[forbidden]]
+symbol = "fopen"
+kind = "host-memory-and-files"
+requires_call = false
+
+[[forbidden]]
+symbol = "fclose"
+kind = "host-memory-and-files"
+requires_call = false
+
+[[forbidden]]
+symbol = "fread"
+kind = "host-memory-and-files"
+requires_call = false
+
+[[forbidden]]
+symbol = "fwrite"
+kind = "host-memory-and-files"
+requires_call = false
+
+[[forbidden]]
+symbol = "fseek"
+kind = "host-memory-and-files"
+requires_call = false
+
+[[forbidden]]
+symbol = "ftell"
+kind = "host-memory-and-files"
+requires_call = false
+
+[[forbidden]]
+symbol = "mkdir"
+kind = "host-memory-and-files"
+requires_call = false
+
+[[forbidden]]
+symbol = "_mkdir"
+kind = "host-memory-and-files"
+requires_call = false
+
+[[forbidden]]
+symbol = "rmdir"
+kind = "host-memory-and-files"
+requires_call = false
+
+[[forbidden]]
+symbol = "remove"
+kind = "host-memory-and-files"
+requires_call = false
+
+[[forbidden]]
+symbol = "rename"
+kind = "host-memory-and-files"
+requires_call = false
+
+[[forbidden]]
+symbol = "system"
+kind = "os-escape"
+requires_call = false
+
+[[forbidden]]
+symbol = "popen"
+kind = "os-escape"
+requires_call = false
+
+[[forbidden]]
+symbol = "asm"
+kind = "os-escape"
+requires_call = false
+
+[[forbidden]]
+symbol = "__asm__"
+kind = "os-escape"
+requires_call = false
+
+[[forbidden]]
+symbol = "socket"
+kind = "raw-socket"
+requires_call = true
+
+[[forbidden]]
+symbol = "connect"
+kind = "raw-socket"
+requires_call = true
+
+[[forbidden]]
+symbol = "bind"
+kind = "raw-socket"
+requires_call = true
+
+[[forbidden]]
+symbol = "listen"
+kind = "raw-socket"
+requires_call = true
+
+[[forbidden]]
+symbol = "accept"
+kind = "raw-socket"
+requires_call = true
+
+[[forbidden]]
+symbol = "send"
+kind = "raw-socket"
+requires_call = true
+
+[[forbidden]]
+symbol = "sendto"
+kind = "raw-socket"
+requires_call = true
+
+[[forbidden]]
+symbol = "recv"
+kind = "raw-socket"
+requires_call = true
+
+[[forbidden]]
+symbol = "recvfrom"
+kind = "raw-socket"
+requires_call = true
+
+[[forbidden]]
+symbol = "getaddrinfo"
+kind = "raw-socket"
+requires_call = true
+
+[[forbidden]]
+symbol = "gethostbyname"
+kind = "raw-socket"
+requires_call = true
+
+[[forbidden]]
+symbol = "WSAStartup"
+kind = "raw-socket"
+requires_call = true

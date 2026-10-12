@@ -1,0 +1,31 @@
+# carts/io.github.jet64-carts.jetchess.toml — curator-owned facts (§6.2)
+schema = 1
+id = "io.github.jet64-carts.jetchess"
+name = "JetChess"
+summary = "A real chess engine on a fantasy console — ninety openings, and pieces you pick up off the board."
+author = "73v3"
+license = "MIT"
+categories = ["strategy", "board-game"]
+repository = "https://github.com/jet64-carts/jetchess"
+diz = '''
+JETCHESS v1.0 -- a chess machine for the
+Jet64 console. A real engine on a worker
+thread, ninety named openings, algebraic
+notation, and pieces you pick up off the
+board. Three opponents, from easily led
+to hard to beat. Free forever. -- 73v3
+'''
+[[releases]]
+version = "1.0.0"
+revision = "0a114689f2799ddecd608452b07565155f5a843a"
+source = "https://github.com/jet64-carts/jetchess/archive/0a114689f2799ddecd608452b07565155f5a843a.tar.gz"
+sha256 = "f4f33c11fc6174c2bb53d693677ce385ad575d980cb81134f29d3ced0d6af4bd"
+tree_sha256 = "79f35b1141b3cd6b8a401e8ef9cfbd8e0d15d47a0ee440b47bc710f62c748726"
+archive_bytes = 278728
+expanded_bytes = 5843388
+jet64_api = 11
+network = false
+published = "2026-10-12"
+yanked = false
+unavailable = false
+screenshot = { sha256 = "9dcf235dda14146ecee3444234ef9253fe86f0d1fb47f403542151cddc0a8a06", bytes = 100314, width = 1280, height = 720 }

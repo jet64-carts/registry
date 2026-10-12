@@ -1,0 +1,14 @@
+# boards.toml — the phonebook of known community boards (docs/cart_exchange/cart_exchange.md §6.6).
+#
+# A board is a name, a root index URL, and a trust note. Empty at launch by
+# design: this file existing is the federation promise — the official board
+# lists other boards' numbers, exactly as boards always did. Listings ride the
+# generated index-v1.json (regenerate it after editing this file), and the
+# Workstation's DIAL screen renders them. Add one by pull request:
+#
+#   [[boards]]
+#   name = "Night Owl BBS"
+#   index = "https://example.org/jet64/index-v1.json"
+#   note = "community board, unreviewed by the official sysop"
+schema = 1
+boards = []
