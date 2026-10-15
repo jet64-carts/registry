@@ -1297,3 +1297,35 @@ symbols = [
     "JET_LOCKSTEP_DIGEST_INTERVAL_MIN",
     "JET_LOCKSTEP_E_LEFT_BEHIND",
 ]
+
+[[generation]]
+number = 13
+symbols = [
+    "jet_bind_open_ui_pad",
+    "jet_bind_pad_set",
+    "jet_bind_set",
+]
+
+[[generation]]
+number = 14
+symbols = [
+    "JET_SOUND_ALL_CHANNELS",
+    "JET_SOUND_GRACE_TICKS",
+    "JET_SOUND_MAX",
+    "JET_SOUND_NONE",
+    "JET_SOUND_NO_CHANNEL",
+    "JET_SOUND_WHOLE_CATALOGUE",
+    "JetSound",
+    "JetSoundStats",
+    "jet_sound_add",
+    "jet_sound_add_raw",
+    "jet_sound_loop",
+    "jet_sound_loop_on",
+    "jet_sound_open",
+    "jet_sound_play",
+    "jet_sound_play_on",
+    "jet_sound_preload",
+    "jet_sound_resident",
+    "jet_sound_stats",
+    "jet_sound_use_channels",
+]
