@@ -454,18 +454,24 @@ pub fn verify_registry(
     let mut report = ValidationReport::new();
 
     let entries = load_entries(root, &mut report)?;
+    let base_entries = match base_root {
+        Some(base) => Some(load_entries(base, &mut ValidationReport::new())?),
+        None => None,
+    };
     for entry in &entries {
-        verify_entry(entry, options, &mut report);
+        // E19's submitter half weighs what this change submits: an entry the base already holds,
+        // byte for byte, was weighed when it was merged, and a pull request that only touches
+        // the board's own files must never be refused for who merged a cart before it.
+        let submitted = base_entries
+            .as_ref()
+            .is_none_or(|base| !base.contains(entry));
+        verify_entry(entry, options, submitted, &mut report);
     }
 
     let bulletin = verify_bulletin(root, &mut report)?;
     let boards = verify_boards(root, &mut report)?;
     verify_index(root, &entries, &bulletin, &boards.boards, &mut report)?;
 
-    let base_entries = match base_root {
-        Some(base) => Some(load_entries(base, &mut ValidationReport::new())?),
-        None => None,
-    };
     let to_fetch = match &base_entries {
         Some(base) => {
             verify_immutability(base, &entries, &mut report);
@@ -531,7 +537,13 @@ fn load_entries(root: &Path, report: &mut ValidationReport) -> io::Result<Vec<Re
 
 /// The semantic rules for one entry. Every finding names the entry's file so a
 /// PR review can jump straight to it.
-fn verify_entry(entry: &RegistryEntry, options: &VerifyOptions, report: &mut ValidationReport) {
+/// `submitted` is whether this change adds or alters the entry (always, without a base).
+fn verify_entry(
+    entry: &RegistryEntry,
+    options: &VerifyOptions,
+    submitted: bool,
+    report: &mut ValidationReport,
+) {
     let location = || Some(format!("{CARTS_DIR}/{}.toml", entry.id));
     let mut fail = |message: String| {
         report.push(FindingCode::RegistryInvalid, location(), message);
@@ -573,7 +585,7 @@ fn verify_entry(entry: &RegistryEntry, options: &VerifyOptions, report: &mut Val
         }
     };
 
-    verify_namespace(entry, repo.as_ref(), options, report);
+    verify_namespace(entry, repo.as_ref(), options, submitted, report);
     verify_releases(entry, report);
 }
 
@@ -610,11 +622,13 @@ fn verify_categories(categories: &[String], fail: &mut impl FnMut(String)) {
 /// E19: the ID's prefix is a claim, and the registry checks it. Forge-scoped
 /// prefixes are proven mechanically against the repository owner (always) and
 /// the PR author (when CI knows one); any other prefix needs recorded
-/// provenance a human reviewer weighs.
+/// provenance a human reviewer weighs. The PR author is weighed only against an entry the change
+/// `submitted`.
 fn verify_namespace(
     entry: &RegistryEntry,
     repo: Option<&ForgeRepo>,
     options: &VerifyOptions,
+    submitted: bool,
     report: &mut ValidationReport,
 ) {
     let location = Some(format!("{CARTS_DIR}/{}.toml", entry.id));
@@ -635,7 +649,7 @@ fn verify_namespace(
                     );
                 }
             }
-            if let Some(author) = &options.pr_author {
+            if let Some(author) = options.pr_author.as_ref().filter(|_| submitted) {
                 let author = author.to_ascii_lowercase();
                 let submitter_proven = author == account
                     || options
@@ -1279,6 +1293,43 @@ mod tests {
             org_member.report
         );
         std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn the_submitter_is_weighed_only_against_entries_the_change_submits() {
+        // The board's own files changed by someone outside the namespace: the entry is the base's,
+        // byte for byte, so its author is not this change's question.
+        let base = write_registry("submitter-base", &[entry()], "");
+        let head = write_registry("submitter-head", &[entry()], "");
+        let options = VerifyOptions {
+            pr_author: Some("stranger".to_owned()),
+            author_orgs: Vec::new(),
+        };
+        let untouched = verify_registry(&head, Some(&base), &options).unwrap();
+        assert!(
+            !untouched
+                .report
+                .findings()
+                .iter()
+                .any(|finding| finding.code == FindingCode::NamespaceUnproven),
+            "{}",
+            untouched.report
+        );
+
+        // The same stranger altering the entry is weighed as before.
+        std::fs::remove_dir_all(&head).unwrap();
+        let mut altered = entry();
+        altered.name = "Space Hauler Deluxe".to_owned();
+        let head = write_registry("submitter-altered", &[altered], "");
+        let weighed = verify_registry(&head, Some(&base), &options).unwrap();
+        assert!(weighed
+            .report
+            .findings()
+            .iter()
+            .any(|finding| finding.code == FindingCode::NamespaceUnproven));
+        for root in [base, head] {
+            std::fs::remove_dir_all(root).unwrap();
+        }
     }
 
     #[test]

@@ -14,6 +14,12 @@
 // same two. jet_launch_value looks one up by its key, so a link someone pasted
 // into a chat can open the game straight into a room, a level or a replay.
 //
+// The desktop player keeps a few long options for itself and hands none of
+// them to your cart: --fullscreen, --scale=<mode>, --disable-neon and
+// --force-neon. `mygame --fullscreen join=7Q4K` is launched with one value,
+// join. The bare words are still yours: `fullscreen` or `scale=3`, without
+// the dashes, arrives as a launch value like any other.
+//
 // Include "jet_launch.h" yourself; jet64.h does not include it for you.
 //
 // <nocodex>
