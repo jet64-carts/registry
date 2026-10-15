@@ -31,12 +31,16 @@
 // jet_terminal_update every tick and carries on, because the page is the game.
 //
 // One such view ships with Jet64: jet_bind_open_ui, the screen where a player
-// changes which key or pad button does which action. It is declared at the foot
-// of this header because it is drawn ON the panel, so it runs only while the
-// cartridge is driving jet_terminal_update and jet_terminal_draw. The bindings
-// themselves are firmware and cost nothing (jet_input_binds.h); the screen is
-// the part that arrives with the terminal. jet_bind_set_ui_note puts a few
-// lines of your own at the foot of that screen, such as your game's credits.
+// changes which key or pad button does which action — the screen a game's
+// CONTROLS key opens, O by the house's convention, with jet_bind_open_ui_pad for
+// the controller's SELECT. A player steers it with the keyboard or with any
+// controller, so a player holding only a pad can use it and leave it. It is
+// declared at the foot of this header because it is drawn ON the panel, so it
+// runs only while the cartridge is driving jet_terminal_update and
+// jet_terminal_draw. The bindings themselves are firmware and cost nothing
+// (jet_input_binds.h); the screen is the part that arrives with the terminal.
+// jet_bind_set_ui_note puts a few lines of your own at the foot of that screen,
+// such as your game's credits.
 //
 // The terminal copies the command's name and its help text, so those strings
 // may be temporary. It does not copy your function. A registered function must
@@ -333,7 +337,7 @@ void jet_terminal_set_height(float height_pct);
  * Summary: Runs the terminal for one tick: it watches for the open-and-close key, reads what is typed, keeps the history and the scrolling, completes a half-typed command name, and runs a command when Enter is pressed.
  * Parameters:
  *   - dt: How much time this tick covers, in seconds; the dt that _update was given.
- * Returns: true when the terminal is open and has taken the keyboard; false when it is closed.
+ * Returns: true when the terminal is open and has taken the keyboard, and for as long afterwards as the ESC or pad B that closed the rebinding screen is still held; false when it is closed.
  * Include: jet_terminal.h
  * Notes: Call it first thing in _update. When it returns true, return from _update straight away, so the keys typed into the terminal do not also drive your game. A game whose whole screen is a pinned terminal (jet_terminal_set_pinned) calls it and carries on instead, because the terminal is always open and the page is the game. The Tab key completes a half-typed command name, and so does Ctrl+Space, which is there because the Workstation keeps Tab for itself and cannot pass it on.
  * Example:
@@ -513,11 +517,32 @@ void jet_terminal_clear_view(void);
  *   - None.
  * Returns: Nothing.
  * Include: terminal/jet_terminal.h
- * Notes: The screen is drawn ON the terminal panel, so your cartridge must be driving the panel for it to run at all — jet_terminal_update(dt) in _update and jet_terminal_draw() in _draw, exactly as this header's first example shows. Opening it puts the panel up for you, and takes it back down again on the way out if it was not already showing, so a game that never displays a terminal still gets a screen that appears and leaves cleanly. It also takes the WHOLE panel while it stands, whatever height you have the console set to, because a settings page needs the room; the height you chose comes back the moment the player leaves. The screen lays itself out to whatever panel that gives it, so it reads on a 320-pixel picture as well as on a 1280-pixel one. The bindings it edits are firmware (jet_input_binds.h): this call is the only part that needs the terminal. The screen has two settings at the top and the list of actions below. DEVICE chooses whether you are editing the keyboard and mouse or one particular controller, so a change to one pad never touches another. PLAYER chooses whose keys you are editing, or — with a controller chosen — which player that controller's slot drives. Move with the arrow keys, press ENTER or SPACE to capture a new input, and DELETE or BACKSPACE to clear one. Every change is saved to disk straight away. ESC, or the backtick (grave) key with or without Shift, closes the screen; while it is waiting for an input, ESC cancels that capture instead.
+ * Notes: The screen is drawn ON the terminal panel, so your cartridge must be driving the panel for it to run at all — jet_terminal_update(dt) in _update and jet_terminal_draw() in _draw, exactly as this header's first example shows. Opening it puts the panel up for you, and takes it back down again on the way out if it was not already showing, so a game that never displays a terminal still gets a screen that appears and leaves cleanly. It also takes the WHOLE panel while it stands, whatever height you have the console set to, because a settings page needs the room; the height you chose comes back the moment the player leaves. The screen lays itself out to whatever panel that gives it, so it reads on a 320-pixel picture as well as on a 1280-pixel one. The bindings it edits are firmware (jet_input_binds.h): this call is the only part that needs the terminal.
+ *
+ *        The screen has two settings at the top and the list of actions below. DEVICE chooses whether you are editing the keyboard and mouse or one particular controller, so a change to one pad never touches another; this call opens it on the keyboard and mouse, and jet_bind_open_ui_pad opens it on a controller. PLAYER chooses whose keys you are editing, or — with a controller chosen — which player that controller's slot drives. Every change is saved to disk straight away.
+ *
+ *        The keyboard and every connected controller steer it, by inputs no binding can take away. Move with the arrow keys, or a pad's d-pad or left stick; ENTER, SPACE or a pad's A captures a new input; DELETE, BACKSPACE or a pad's X clears one; PAGE UP and PAGE DOWN, or a pad's LB and RB, turn the page. ESC, a pad's B, or the backtick (grave) key with or without Shift closes the screen. While it is waiting for an input, ESC cancels the capture instead, and so does any pad other than the one being listened to with its B; on a controller's own page every input that controller has is an answer, so the capture also gives up by itself after a few seconds, counted down on screen.
+ *
+ *        The ESC or the B that closes the screen is not heard by your game until it is let go: jet_terminal_update goes on answering true while it is held, so a game that returns on that answer does not take the press that left the screen for a move — a jump, or a shot from a game that fires while B is held.
  * Example:
- *   if (jet_key_pressed(JET_KEY_B)) { jet_bind_open_ui(); }
+ *   if (jet_key_pressed(JET_KEY_O)) { jet_bind_open_ui(); }
  */
 void jet_bind_open_ui(void);
+
+/**
+ * Function: jet_bind_open_ui_pad
+ * Summary: Opens the rebinding screen for the player holding a controller, on that controller's own page.
+ * Parameters:
+ *   - pad: The pad slot whose controller asked, from 0 to 3 — the one whose button opened the screen.
+ * Returns: Nothing.
+ * Include: terminal/jet_terminal.h
+ * Notes: Everything jet_bind_open_ui says holds here too; the difference is the page it opens on. The player who pressed SELECT is holding a controller, so the screen opens on THAT controller's bindings, and its PLAYER row sets the seat of the slot that asked, even with an identical controller plugged in beside it. A controller the game cannot remember bindings for — one that names no model, or one past JET_BIND_MAX_PAD_PROFILES — plays on the shipped layout and is shown the keyboard's page instead, and so is an empty or out-of-range slot; any controller steers the screen either way. Ask every slot, so whichever player presses the button is the one the screen opens for.
+ * Example:
+ *   for (int pad = 0; pad < JET_GPAD_MAX_PADS; pad++) {
+ *       if (jet_pad_pressed(pad, JET_PAD_BTN_SELECT)) { jet_bind_open_ui_pad(pad); break; }
+ *   }
+ */
+void jet_bind_open_ui_pad(int pad);
 
 /**
  * Constant: JET_BIND_UI_NOTE_BYTES

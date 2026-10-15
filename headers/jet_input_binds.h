@@ -26,9 +26,15 @@
 //   void _update(float dt) { if (jet_terminal_update(dt)) return; ... }
 //   void _draw(void)       { ... jet_terminal_draw(); }
 //
-// (carts/jetquest is the worked example.) Bindings themselves cost a cartridge
-// nothing extra: they are firmware, and btn()/btnp() read them. The screen is
-// the part that arrives with the terminal.
+// (carts/jetrunner is the smallest worked example: O opens the screen, and a
+// controller's SELECT opens it on that controller's page with
+// jet_bind_open_ui_pad.) Bindings themselves cost a cartridge nothing extra:
+// they are firmware, and btn()/btnp() read them. The screen is the part that
+// arrives with the terminal.
+//
+// A game that draws its own controls screen changes bindings with jet_bind_set
+// and jet_bind_pad_set, from the opt-in jet_bind_edit.h, and reads them back
+// with jet_bind_get and jet_bind_pad_get below.
 //
 // TWO PLAYERS, AND CONTROLLERS THAT DISAGREE
 //
@@ -526,7 +532,7 @@ const char* jet_bind_input_name(JetBindInput input);
  *   - None.
  * Returns: Nothing.
  * Include: jet_input_binds.h
- * Notes: It saves every player's keys, every remembered controller's own bindings, and which player each pad slot drives. The rebinding screen saves after every change, so most games never call this. Call it if your own code changes a binding.
+ * Notes: It saves every player's keys, every remembered controller's own bindings, and which player each pad slot drives. The rebinding screen saves after every change, so most games never call this. Call it once your own code has changed a binding — with jet_bind_set or jet_bind_pad_set (jet_bind_edit.h), or jet_bind_set_pad_player.
  * Example:
  *   jet_bind_save();
  */
@@ -634,11 +640,43 @@ int _jet_bind_profile_pad(int profile);
  * Returns: A pointer at the slot, which is never NULL.
  * Include: jet_input_binds.h
  * Internal: Called by Jet64 itself; omitted from the creator-facing Codex.
- * Notes: One accessor, so reading a binding for the rebinding screen and writing the one the player just captured can never disagree about which table they are in. The caller owns the ranges: they are not checked, because the screen derives all four from the counts above.
+ * Notes: One accessor, so reading a binding for the rebinding screen and writing one through _jet_bind_store — which stands on this — can never disagree about which table they are in. Read through it; write through _jet_bind_store, which also keeps the players' walk honest. The caller owns the ranges: they are not checked, because the screen derives all four from the counts above.
  * Example:
  *   // No cartridge call is required; use jet_bind_get() or jet_bind_pad_get() to read one.
  */
 JetBindInput* _jet_bind_slot(int profile, int player, int action, int slot);
+
+/**
+ * Function: _jet_bind_store
+ * Summary: Internal runtime hook that writes one binding slot, in whichever of the two tables it lives.
+ * Parameters:
+ *   - profile: As for _jet_bind_slot: 0 or any index outside the live profile table for the player's keyboard and mouse, or a controller's profile index for that controller.
+ *   - player: Which player's keys, from 0 to JET_BIND_PLAYERS - 1. Ignored for a controller.
+ *   - action: The action's id, from 0 to _jet_bind_action_count() - 1.
+ *   - slot: 0 for the primary binding or 1 for the spare.
+ *   - input: The binding to store. The caller has already checked that it belongs on that device.
+ * Returns: Nothing.
+ * Include: jet_input_binds.h
+ * Internal: Called by Jet64 itself; omitted from the creator-facing Codex.
+ * Notes: The one way a binding is written from outside the bindings module — by the rebinding screen and by jet_bind_edit.h. A key stored for a player who had none brings that player into every "any player" question straight away, exactly as loading a saved record does, so the change is heard in this run rather than only after the next boot. The caller owns the ranges, as for _jet_bind_slot.
+ * Example:
+ *   // No cartridge call is required; use jet_bind_set() or jet_bind_pad_set() from jet_bind_edit.h.
+ */
+void _jet_bind_store(int profile, int player, int action, int slot, JetBindInput input);
+
+/**
+ * Function: _jet_bind_pad_profile
+ * Summary: Internal runtime hook that answers which binding profile the controller in a pad slot is reading.
+ * Parameters:
+ *   - pad: The pad slot, from 0 to JET_GPAD_MAX_PADS - 1.
+ * Returns: The profile's index, or 0 — the shipped layout — for an empty slot, a controller that names no model, one past JET_BIND_MAX_PAD_PROFILES, or a slot out of range.
+ * Include: jet_input_binds.h
+ * Internal: Called by Jet64 itself; omitted from the creator-facing Codex.
+ * Notes: The inverse of _jet_bind_profile_pad, and the one the inverse cannot stand in for: two identical controllers read ONE profile, so the first slot reading a profile is not necessarily the slot that asked. The answer is the one the last tick resolved, so a controller is known from the first tick it is plugged in.
+ * Example:
+ *   // No cartridge call is required; use jet_pad_id() to tell controllers apart.
+ */
+int _jet_bind_pad_profile(int pad);
 
 /**
  * Function: _jet_bind_axis_pressed

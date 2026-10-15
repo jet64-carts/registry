@@ -54,6 +54,13 @@ pub fn witness_release(
     let coordinate = format!("{} {}", check.id, check.release.version);
     let location = || Some(format!("carts/{}.toml", check.id));
 
+    // Every release unpacks into its own room: `accept_archive` extracts to
+    // `<scratch>/staging` and refuses one that exists, so a shared scratch
+    // passed a two-release verify only when `keep_trees` moved each surface
+    // away — a plain `verify --fetch` failed on the second release.
+    let scratch = &scratch.join(coordinate.replace(' ', "-"));
+    std::fs::create_dir_all(scratch)
+        .map_err(|error| format!("cannot make scratch for {coordinate}: {error}"))?;
     let archive = scratch.join(format!("{coordinate}.tar.gz").replace(' ', "-"));
     download(&check.release.source, &archive)?;
 
