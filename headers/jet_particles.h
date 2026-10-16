@@ -69,10 +69,10 @@
 // and only then does the compiler's dependency resolver pull jet_particles.c
 // into the build. Carts that never spawn a particle pay zero compile cost.
 //
-// THE CODE IT PROMOTES: carts/asteroids/particles.c grew an excellent, proven
-// effect pool — life-decaying debris streaks that cool along a colour ramp, and
-// expanding shockwave rings with a bright core inside a soft halo. It was per-
-// cart and hand-rolled (a linear scan for a free slot, one fixed warm ramp).
+// THE CODE IT PROMOTES: a cart grew an excellent, proven effect pool — life-
+// decaying debris streaks that cool along a colour ramp, and expanding
+// shockwave rings with a bright core inside a soft halo. It was per-cart and
+// hand-rolled (a linear scan for a free slot, one fixed warm ramp).
 // This module GENERALISES it into reusable runtime hardware: configurable
 // emitters, arbitrary per-emitter colour ramps, optional gravity and drag, both
 // "spark" and "ring" particle kinds, and three draw styles (a cheap single
@@ -85,8 +85,8 @@
 //
 // THE CONTRACT THAT MATTERS: particles are DECORATION. When a pool is full a
 // spawn is SILENTLY DROPPED — emission never stalls the game, never overwrites a
-// live particle, never allocates. The asteroids code did exactly this; the
-// contract is preserved here.
+// live particle, never allocates. The cart code it promotes did exactly this;
+// the contract is preserved here.
 //
 // Design notes (the choices that matter):
 //   * Two pools, one system            → sparks and rings are different shapes,
@@ -203,8 +203,8 @@
 #define JET_PARTICLE_MIN_LIFE 0.0001f
 
 // How long a shockwave ring lives by default: the seconds it takes to grow from
-// nothing to its full radius and fade out. It came from the asteroids cart's
-// RING_LIFE.
+// nothing to its full radius and fade out. It came from the cart code this
+// module promotes.
 #define JET_PARTICLE_RING_LIFE 0.42f
 
 // For the first (1 - this) share of its life a ring shows its bright core
@@ -253,7 +253,7 @@ static inline JetColorRamp jet_make_color_ramp(const uint8_t* stops, uint32_t co
 
 /**
  * Function: jet_make_warm_ramp
- * Summary: Gives you the standard warm explosion ramp: white, then yellow, orange, red and deep red, as Aurora palette indices. It came from carts/asteroids.
+ * Summary: Gives you the standard warm explosion ramp: white, then yellow, orange, red and deep red, as Aurora palette indices.
  * Parameters:
  *   - None.
  * Returns: A ready-made warm JetColorRamp, handed back by value.
@@ -264,7 +264,7 @@ static inline JetColorRamp jet_make_color_ramp(const uint8_t* stops, uint32_t co
  */
 static inline JetColorRamp jet_make_warm_ramp(void) {
     // Aurora indices: white, yellow, orange, red, deep red. A streak walks this
-    // table from hot to cold as it cools. (carts/asteroids/particles.c WARM_RAMP)
+    // table from hot to cold as it cools.
     static const uint8_t warm[] = { 15u, 40u, 37u, 31u, 33u };
     return jet_make_color_ramp(warm, (uint32_t)(sizeof(warm) / sizeof(warm[0])));
 }
@@ -413,7 +413,7 @@ static inline JetParticleSystem jet_make_particle_system(void) {
  *   - ring_capacity: The most shockwave rings alive at once. Any spawn beyond that is dropped. 0 turns rings off.
  * Returns: true if both pools you asked for were reserved; false if WRAM ran out. A pool that failed is left inert and quietly drops its spawns.
  * Include: jet_particles.h
- * Notes: Call it only from _init(). It reserves from WRAM's bump allocator, which hands memory out and never takes it back, so every extra call leaks WRAM. The sizes carts/asteroids uses (about 640 sparks and 16 rings) suit a busy bullet-hell; if WRAM is tight, work out the cost with jet_pool_storage_bytes. If only one of the two pools could be reserved, the system still works for that pool.
+ * Notes: Call it only from _init(). It reserves from WRAM's bump allocator, which hands memory out and never takes it back, so every extra call leaks WRAM. About 640 sparks and 16 rings suit a busy bullet-hell; if WRAM is tight, work out the cost with jet_pool_storage_bytes. If only one of the two pools could be reserved, the system still works for that pool.
  * Example:
  *   JetParticleSystem fx;
  *   jet_particles_init(&fx, 640, 16);

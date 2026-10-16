@@ -21,7 +21,8 @@
 // the sound effects mixed together, exactly as the player hears it. With it
 // you can copy out the newest stretch of the waveform to draw, measure how
 // loud the sound is, hold a waveform still on the screen the way an
-// oscilloscope does, and pick out the beat of the music, so your pictures
+// oscilloscope does, and follow the beat of the music — hear each new sound
+// start, know the tempo, and see the next beat coming — so your pictures
 // can move to the sound. This header is not part of jet64.h; include it
 // yourself, as shown above.
 //
@@ -29,11 +30,13 @@
 // jet_scope reads the AUDIO SCOPE hardware block (JET_SCOPE_OFFSET): a
 // host-written ring of the post-mix master bus — everything the speakers get,
 // tapped at the Mixing Station analyser's point. On top of the raw ring it
-// offers the classic music-visualization toolkit: rate-invariant envelope
-// smoothing, windowed RMS/peak statistics, a phase-stabilising oscilloscope
-// trigger, and a beat-detection engine derived from the Geiss screensaver
-// (© 1998-2022 Ryan Geiss, BSD-3-Clause; see carts/jetamp — algorithms
-// transcribed, code written fresh).
+// offers a music-visualization toolkit of its own design: rate-invariant
+// envelope smoothing, windowed RMS/peak statistics, an oscilloscope sync that
+// holds a waveform still by matching its shape, and a pulse detector — onsets
+// from the rise in five bands' loudness, the tempo from their
+// autocorrelation, and the beat's phase from a resonator tuned to it — so a
+// picture can land ON the beat rather than after it. docs/audio/scope_pulse.md
+// is the design record and its measurement.
 // </nocodex>
 //
 // The scope is a real-time tap, not a deterministic input: what it hears is
@@ -105,44 +108,44 @@ extern volatile uint8_t* SCOPE;
 #endif // JET_AUDIO_BLOCKS_STUBBED
 
 /**
- * Constant: JET_SCOPE_BEAT_TAPE_N
- * Summary: How many entries JetScopeBeat keeps in its four-second history of the volume.
+ * Constant: JET_SCOPE_PULSE_BANDS
+ * Summary: How many bands of pitch JetScopePulse listens to separately: five, from the bass up to the hiss.
  * Include: jet_scope.h
- * Notes: The beat detector writes one entry 30 times a second, whatever your tick rate is, so its 120 entries always cover four seconds. Use this constant when you look through, or draw, the past array.
+ * Notes: Band 0 is the bass and the kick drum, below about 120 Hz; band 1 the low notes, to about 500 Hz; band 2 the middle, to about 2 kHz; band 3 the upper middle; band 4 the air, the hiss of hi-hats and cymbals. JetScopePulse.band_flux holds one value for each, lowest first, so a picture can answer the kick drum and the hi-hat differently.
  * Example:
- *   for (uint32_t i = 0; i < JET_SCOPE_BEAT_TAPE_N; i++) draw_history(beat.past[i]);
+ *   float kick = pulse.band_flux[0], hats = pulse.band_flux[JET_SCOPE_PULSE_BANDS - 1];
  */
-#define JET_SCOPE_BEAT_TAPE_N 120
+#define JET_SCOPE_PULSE_BANDS 5
 
 /**
- * Constant: JET_SCOPE_BEAT_REF_HZ
- * Summary: The rate, 30 times a second, at which the beat detector's tuning numbers were first worked out.
+ * Constant: JET_SCOPE_PULSE_HISTORY
+ * Summary: How many of its analysis frames JetScopePulse remembers for its tempo search: a little over two seconds.
  * Include: jet_scope.h
- * Notes: jet_scope_beat_tick and jet_scope_env_rate rescale everything from this 30 Hz starting point for you. Tell them your real tick rate; do not slow your calls to the beat detector down to 30 a second to match.
+ * Notes: The detector listens in frames of 1/120 of a second, whatever the sound device's rate, and keeps the last 256 frames of onset strength. That is long enough to compare each frame with the one two beats before it at the slowest tempo it reports, 60 beats a minute. It sizes arrays inside JetScopePulse; you never need it to use the detector.
  * Example:
- *   float release = jet_scope_env_rate(0.85f, JET_SCOPE_BEAT_REF_HZ, JET_GUEST_TICK_HZ);
+ *   float seconds = (float)JET_SCOPE_PULSE_HISTORY / 120.0f; // about 2.1
  */
-#define JET_SCOPE_BEAT_REF_HZ 30.0f
+#define JET_SCOPE_PULSE_HISTORY 256
 
 /**
- * Constant: JET_SCOPE_BEAT_SILENCE_FLOOR
- * Summary: The default volume below which the beat detector treats the sound as silence and reports no beat.
+ * Constant: JET_SCOPE_PULSE_SILENCE_DB_DEFAULT
+ * Summary: The default loudness, 60 dB below full scale, under which JetScopePulse treats the sound as silence.
  * Include: jet_scope.h
- * Notes: jet_scope_beat_init puts this value in JetScopeBeat.silence_floor. Raise it to ignore more background noise; lower it when you mean to analyse a very quiet mix. The number comes from the original Geiss code, which ignored an average volume below 10 in its own units. That unit was the 16-bit peak-to-peak value divided by 256, which is 256 times the normalised half-peak-to-peak volume this detector is fed, so 10 of those units is 10/256 here.
+ * Notes: jet_scope_pulse_init puts this value in JetScopePulse.silence_db. A frame quieter than this starts no onset, and half a second of them ends a steady beat. Raise it to ignore a noisy background; lower it to follow a very quiet mix. Everything else the detector measures is relative, so the music's volume makes no other difference.
  * Example:
- *   beat.silence_floor = JET_SCOPE_BEAT_SILENCE_FLOOR;
+ *   pulse.silence_db = JET_SCOPE_PULSE_SILENCE_DB_DEFAULT + 12.0f; // ignore a hissy line
  */
-#define JET_SCOPE_BEAT_SILENCE_FLOOR (10.0f / 256.0f)
+#define JET_SCOPE_PULSE_SILENCE_DB_DEFAULT (-60.0f)
 
 /**
- * Constant: JET_SCOPE_BIG_BEAT_THRESHOLD_DEFAULT
- * Summary: The default for how much louder than the recent past a hit must be to count as a big beat.
+ * Constant: JET_SCOPE_SYNC_POINTS
+ * Summary: How many points of the drawn waveform JetScopeSync remembers as its shape.
  * Include: jet_scope.h
- * Notes: jet_scope_beat_init puts this value in JetScopeBeat.big_beat_threshold. A higher value demands a rarer, harder hit. Code that runs a scene may lower it bit by bit during a quiet passage, so that softer hits still set things off.
+ * Notes: The sync samples the stretch you draw at this many evenly spaced points and keeps a running average of that shape, which is what it matches the next tick's wave against. It sizes the memory inside JetScopeSync; you never need it to use the sync.
  * Example:
- *   beat.big_beat_threshold = JET_SCOPE_BIG_BEAT_THRESHOLD_DEFAULT;
+ *   uint32_t spacing = span / JET_SCOPE_SYNC_POINTS; // samples between remembered points
  */
-#define JET_SCOPE_BIG_BEAT_THRESHOLD_DEFAULT 1.10f
+#define JET_SCOPE_SYNC_POINTS 32
 
 // --- Availability & raw ring access ---
 
@@ -261,7 +264,7 @@ uint32_t jet_scope_read_stereo(float* out_l, float* out_r, uint32_t n);
  *   - actual_hz: The tick rate you are running at, in ticks a second, for example 120.
  * Returns: The rate to use at actual_hz: rate_at_ref raised to the power (ref_hz / actual_hz).
  * Include: jet_scope.h
- * Notes: Use the result as r in x = x*r + target*(1-r). This is the AdjustRateToFPS law from the Geiss visualiser (main.cpp:548), and it is the reason a look designed at 30 frames a second still looks right at 120.
+ * Notes: Use the result as r in x = x*r + target*(1-r). Running n ticks of a rate r keeps r to the power n of the old value, so a rate tuned at ref_hz ticks a second keeps the same share each second once it is raised to ref_hz / actual_hz. That is why a look designed at 30 frames a second still looks right at 120.
  * Example:
  *   float r = jet_scope_env_rate(0.85f, 30.0f, 120.0f);
  *   env = env * r + vol * (1.0f - r);
@@ -296,134 +299,185 @@ float jet_scope_rms(uint32_t n);
  */
 float jet_scope_peak(uint32_t n);
 
-// --- Oscilloscope trigger ---
+// --- Oscilloscope sync ---
 
 /**
- * Struct: JetScopeTrigger
- * Summary: The memory jet_scope_trigger keeps between calls, so that a waveform drawn like an oscilloscope holds still instead of sliding sideways from frame to frame.
+ * Struct: JetScopeSync
+ * Summary: The memory jet_scope_sync keeps between calls: the shape of the waveform it showed last, so the next picture can be lined up with it.
  * Fields:
- *   - level: The sample value that was matched last time.
- *   - slope: The slope of the wave at that sample. Only its sign matters: it says whether the wave was rising or falling there.
+ *   - state: The sync's own working memory: the remembered shape and how loud the wave was. Leave it alone.
  * Include: jet_scope.h
- * Notes: Set it to all zeros once, and pass the same one to jet_scope_trigger every tick. The memory carried from one call to the next is what makes a repeating wave stand still; if you make a fresh one each frame, the trigger cannot work.
+ * Notes: Zero it once (a static one starts zeroed), then pass the same one to jet_scope_sync every tick. Keep one for each waveform you draw: two scopes sharing one would pull each other's picture about.
  * Example:
- *   static JetScopeTrigger trigger;
- *   uint32_t got = jet_scope_read_mono(wave, WAVE_CAP);
- *   uint32_t start = jet_scope_trigger(&trigger, wave, got / 2, 0.01f);
+ *   static JetScopeSync sync; // zero-initialised: ready to use
+ *   uint32_t at = jet_scope_sync(&sync, wave, got, 640);
  */
 typedef struct {
-    float level; // the sample value matched last tick
-    float slope; // the slope at that sample (only its sign matters)
-} JetScopeTrigger;
+    struct {
+        float shape[JET_SCOPE_SYNC_POINTS]; // the remembered picture, scaled to unit size
+        uint32_t spacing;                   // samples between the remembered points
+        float level;                        // the smoothed wave's RMS on the last call
+        bool primed;                        // a shape has been remembered
+    } state; // the sync's own working memory; leave it alone
+} JetScopeSync;
 
 /**
- * Function: jet_scope_trigger
- * Summary: Finds where in a waveform to start drawing so that the picture holds still: the first sample that matches last tick's level and direction.
+ * Function: jet_scope_sync
+ * Summary: Finds where in a waveform to start drawing so that the picture holds still from one tick to the next, the job an oscilloscope's trigger does.
  * Parameters:
- *   - t: The trigger's memory, a JetScopeTrigger you zeroed once and pass in every call. It is updated each time.
- *   - wave: The waveform, for example from jet_scope_read_mono.
- *   - search: How many samples from the start of wave to look through. Keep it to half the window at most, so a full screen's width of wave is left after the start point.
- *   - level_tolerance: How close a sample must be to the remembered level to count as a match, in the same units as the samples. Size it to your sound: at least as much as the wave changes over the two-sample step the search takes, which is roughly amplitude * 4*pi*f/sample_rate for a tone of f Hz (about 0.06 for a half-height 440 Hz wave at 48 kHz). Too small and the search steps over the crossings and the picture jumps between cycles; a generous value is stable.
- * Returns: The offset into wave to start drawing from. 0 when nothing matched; the memory then latches on afresh, so the next tick can recover.
+ *   - s: The sync's memory, a JetScopeSync you zeroed once and pass in every call. It is updated each time.
+ *   - wave: The waveform, oldest sample first, for example from jet_scope_read_mono.
+ *   - n: How many samples wave holds.
+ *   - span: How many samples you will draw from the start point. The start is chosen so that all of them lie inside wave.
+ * Returns: The offset into wave to start drawing from, between 0 and n - span. 0 when n is not larger than span.
  * Include: jet_scope.h
- * Notes: This is the oscilloscope level trigger from the Geiss visualiser (main.cpp:8033). It looks at every second sample, insists that the wave be heading the same way as last time, and takes the first sample whose level is within the tolerance. Draw the wave from that offset onward and a steady tone stands still on the screen.
+ * Notes: It works in two steps. First it finds the candidates: the places where a smoothed copy of the wave rises through zero, with a little hysteresis so that noise cannot make one. The smoothing keeps the strong low notes, so the candidates fall at one point of the bass line's cycle. Then it scores each candidate by how closely the picture drawn from there matches the shape it remembers from earlier ticks, and takes the best, the newest one when two are as good. A steady tone therefore stands still to within a sample, and a mix of notes keeps the same overall picture instead of hopping between cycles. When no crossing falls inside the window, a bass note slower than the window for example, it searches the window for the best match to the remembered shape directly.
+ *
+ *        Give it a window longer than you draw: the extra, n - span, is the room it searches, and one period of the lowest note you want held still is plenty. There is no tolerance to tune, because the hysteresis follows the wave's own loudness.
  * Example:
- *   static JetScopeTrigger trig; // zero-initialised
+ *   static JetScopeSync sync;
+ *   float wave[1280];
  *   uint32_t got = jet_scope_read_mono(wave, 1280);
- *   uint32_t at = jet_scope_trigger(&trig, wave, got / 2, 0.0078f);
- *   draw_wave(wave + at, got - at);
+ *   uint32_t at = jet_scope_sync(&sync, wave, got, 640);
+ *   draw_wave(wave + at, 640);
  */
-uint32_t jet_scope_trigger(JetScopeTrigger* t, const float* wave, uint32_t search,
-                            float level_tolerance);
+uint32_t jet_scope_sync(JetScopeSync* s, const float* wave, uint32_t n, uint32_t span);
 
-// --- Volume statistics & beat detection (the Geiss engine) ---
+// --- The pulse: onsets, tempo and the beat ---
+
+// <nocodex>
+// The detector reads the sound in groups of this many samples, one decimated
+// sample each, and keeps an unfinished group in its state until the rest of
+// it arrives — which is what makes its answers independent of how the sound
+// is split between calls.
+#define JET_SCOPE_PULSE_GROUP 8
+// </nocodex>
 
 /**
- * Struct: JetScopeBeat
- * Summary: The beat detector's memory. It takes the loudness of the sound each tick and turns it into a beat signal, a flash amount and smoothed loudness levels for your game to use.
+ * Struct: JetScopePulse
+ * Summary: The pulse detector: it listens to the sound tick by tick and tells you when a new sound starts, how fast the beat is, where you are inside the beat, and whether the music has a steady beat at all.
  * Fields:
- *   - vol: The volume you gave it on the latest tick, in normalised units, where 1.0 is full scale.
- *   - avg_narrow: A fast-moving smoothed volume, tuned at 30 ticks a second and rescaled to your tick rate.
- *   - avg_mid: A medium-speed smoothed volume.
- *   - avg_wide: A slow-moving smoothed volume.
- *   - past: For the detector's own use: the last four seconds of volume, one entry 30 times a second.
- *   - past_pos: The slot in past where the next entry will go.
- *   - beat_strength: How bumpy the volume history is, scaled to run from about 0 to 200.
- *   - beat_mode: true while a steady beat is going. It switches on when beat_strength rises above 109 and off when it falls below 71, so it does not flicker in between.
- *   - big_beat: true on a tick with a standout hit.
- *   - big_beat_threshold: How much louder than the recent past a hit must be to count as big. The default is 1.10.
- *   - brightness: A flash amount from 0 to 1, worked out from the recent loudness.
- *   - silence_floor: When the average of the history is below this, beat_strength is forced to zero.
- *   - tape_mean: The average of the four-second history, kept up to date. Read it, never write it.
- *   - tape_std: The standard deviation of the history (how far the volume tends to wander from its average), kept up to date. Read it, never write it.
- *   - tape_max: The largest value in the history, kept up to date. Read it, never write it.
- *   - tick_accum: For the detector's own use: the counter that turns your ticks into 30 entries a second.
+ *   - onset: true on a tick in which a new sound started: a drum hit, a plucked note, a chord struck. It reports what has happened, within about 10 ms of it.
+ *   - accent: How hard that onset hit next to the recent ones: 1 is a typical hit, 2 twice as strong. 0 on a tick with no onset.
+ *   - flux: The newest frame's onset strength: how far the loudness of the five bands rose, added up, in decibels. 0 in a steady sound, a few decibels for a soft note, tens for a drum.
+ *   - band_flux: The same rise for each band on its own, lowest first (see JET_SCOPE_PULSE_BANDS): a kick drum shows in band 0, a hi-hat in band 4.
+ *   - beat: true on the tick the detector expects a beat, foreseen from the beats before it rather than heard. Only while steady is true.
+ *   - phase: How far the current beat has got, from 0 on the beat to nearly 1 just before the next. It moves smoothly, so a picture can swing with it.
+ *   - bpm: The tempo the detector has settled on, in beats a minute, between 60 and 200; 0 until it has heard enough.
+ *   - confidence: How sure it is of that tempo, from 0 to 1: how closely the onsets repeat at that beat. Noise reads under 0.1; music with a clear beat reads 0.3 to 0.9.
+ *   - steady: true while the music has a steady beat. It switches on when confidence rises above 0.25, and off when confidence falls below 0.15, when no onset has come for 2.5 seconds, or after half a second of silence.
+ *   - silence_db: A setting: the loudness, in decibels below full scale, under which the sound counts as silence. jet_scope_pulse_init sets JET_SCOPE_PULSE_SILENCE_DB_DEFAULT.
+ *   - state: The detector's own working memory: its band filters, its record of onset strength and that record's autocorrelation, and the resonator that keeps the beat's phase. Leave it alone.
  * Include: jet_scope.h
- * Notes: Set it up once with jet_scope_beat_init, then call jet_scope_beat_tick once, and only once, in every _update. Read big_beat for a one-tick event, beat_mode for a beat that keeps going, and brightness for a smooth pulse in your picture. Volumes are in normalised sample units; jet_scope_peak over about one tick's worth of frames is a good thing to feed it.
+ * Notes: Set it up once with jet_scope_pulse_init, then call jet_scope_pulse_tick once in every _update. Each call hears exactly the frames the host has written since the call before, so nothing is missed or heard twice. The detector is deterministic: the same samples give the same answers, bit for bit, however they are split between calls.
+ *
+ *        Use onset to react to what you hear, beat and phase to move with the music's pulse, and steady to tell music with a beat from a held chord, speech or noise. The next beat is (1 - phase) * 60 / bpm seconds away, so a picture can start moving before it lands. The scope runs ahead of the speakers by jet_scope_output_latency_frames, so a flash that must land when the beat is heard can wait that long.
  * Example:
- *   static JetScopeBeat beat;
- *   void _init(void) { jet_scope_beat_init(&beat); }
+ *   static JetScopePulse pulse;
+ *   void _init(void) { jet_scope_pulse_init(&pulse); }
  *   void _update(float dt) {
- *       uint32_t frames = jet_scope_sample_rate() / JET_GUEST_TICK_HZ;
- *       jet_scope_beat_tick(&beat, jet_scope_peak(frames), JET_GUEST_TICK_HZ);
+ *       jet_scope_pulse_tick(&pulse);
+ *       if (pulse.beat) kick_background_pulse();
+ *       float swing = pulse.steady ? sinf(pulse.phase * JET_TAU) : 0.0f;
+ *       tilt_camera(swing);
  *   }
  */
 typedef struct {
-    float vol;         // the volume fed in this tick
-    float avg_narrow;  // fast smoothing   (rate 0.30 at 30 Hz, rescaled)
-    float avg_mid;     // medium smoothing (rate 0.85 at 30 Hz, rescaled)
-    float avg_wide;    // slow smoothing   (rate 0.96 at 30 Hz, rescaled)
+    bool onset;                             // a new sound started in the frames this call heard
+    float accent;                           // that onset over the recent ones (1 = typical)
+    float flux;                             // the newest frame's summed rise in band loudness, dB
+    float band_flux[JET_SCOPE_PULSE_BANDS]; // that rise band by band, lowest first
+    bool beat;                              // the foreseen beat fell in the frames this call heard
+    float phase;                            // 0 on the beat, rising to 1 at the next
+    float bpm;                              // the tempo, beats a minute (0 = none yet)
+    float confidence;                       // how strongly the onsets repeat at that tempo, 0..1
+    bool steady;                            // the music has a steady beat (hysteretic)
+    float silence_db;                       // setting: frames quieter than this are silence
 
-    // The "volume tape": avg_narrow sampled 30 times a second, a sliding
-    // four-second window whose bumpiness is the signature of a beat.
-    float past[JET_SCOPE_BEAT_TAPE_N];
-    uint32_t past_pos;
-
-    float beat_strength;      // bumpiness of the tape, scaled to about 0..200
-    bool beat_mode;           // on above 109, off below 71, unchanged in between
-    bool big_beat;            // avg_narrow beat the tape's windowed maximum
-    float big_beat_threshold; // the big-beat gate; a scene director may lower it over time
-    float brightness;         // (vol - mean) / (0.5 * stddev), clamped to 0..1
-    float silence_floor;      // a tape mean below this forces beat_strength to 0
-
-    // The detector's own bookkeeping: the tape's cached statistics (worked out
-    // at the tape's 30 Hz pace) and the counter that thins ticks down to that
-    // pace. Read freely; never write.
-    float tape_mean;
-    float tape_std;
-    float tape_max;
-    float tick_accum;
-} JetScopeBeat;
+    struct {
+        uint32_t sample_rate;                      // the rate the filters are tuned for (0 = none)
+        uint32_t head;                             // the scope frame the next tick reads from
+        bool listening;                            // head is valid
+        float pending[JET_SCOPE_PULSE_GROUP];      // an unfinished group of samples
+        uint32_t pending_count;                    // how many samples it holds
+        uint32_t frame_groups;                     // groups in the frame being gathered
+        uint32_t frame_fill;                       // groups gathered so far
+        uint32_t frame_carry;                      // spreads uneven frames evenly (sample units)
+        float split_low, split_mid, split_high;    // the band splits' one-pole coefficients
+        float low_a, low_b, mid, high;             // the band splits' filter states
+        float prev, prev2;                         // the last two pair sums (the air band's)
+        float energy[JET_SCOPE_PULSE_BANDS];       // each band's energy so far this frame
+        float energy_mean;                         // the group means' energy so far this frame
+        float level_db[JET_SCOPE_PULSE_BANDS];     // each band's loudness last frame
+        float peak_db[JET_SCOPE_PULSE_BANDS];      // each band's decaying recent peak
+        float step_db[JET_SCOPE_PULSE_BANDS];      // each band's typical frame-to-frame movement
+        float flux_mean, flux_var;                 // the summed onset threshold's statistics
+        float band_flux_mean[JET_SCOPE_PULSE_BANDS]; // each band's own onset threshold's
+        float band_flux_var[JET_SCOPE_PULSE_BANDS];  // statistics (the upper bands use theirs)
+        float onset_mean;                          // a typical onset's flux (accent's yardstick)
+        uint32_t since_onset;                      // frames since the last onset
+        float tempo_mean;                          // the tempo strength's running mean
+        float tempo_prev, tempo_prev2;             // the smoothing taps on the tempo strength
+        float history[JET_SCOPE_PULSE_HISTORY];    // the smoothed tempo strength, a ring
+        uint32_t history_pos;                      // the newest entry in history
+        float acf[JET_SCOPE_PULSE_HISTORY];        // its leaky autocorrelation, by lag in frames
+        float prior[JET_SCOPE_PULSE_HISTORY / 2];  // the tempo prior, by lag in frames
+        float period;                              // frames per beat (0 = none yet)
+        uint32_t search_wait;                      // frames until the next full tempo search
+        float res_re, res_im;                      // the beat resonator
+        float rot_re, rot_im;                      // its turn per frame (with its decay)
+        float lead_re, lead_im;                    // its turn by the analysis lag
+        float rot_period;                          // the period that turn was built for
+        uint32_t since_beat;                       // frames since the last foreseen beat
+        uint32_t silent_frames;                    // consecutive silent frames
+        uint32_t heard_frames;                     // frames of sound since the last long pause
+        float silence_power;                       // silence_db as a mean square
+        float silence_for_db;                      // the silence_db that power was worked out for
+    } state; // the detector's own working memory; leave it alone
+} JetScopePulse;
 
 /**
- * Function: jet_scope_beat_init
- * Summary: Puts a JetScopeBeat back to its starting state, with the default settings.
+ * Function: jet_scope_pulse_init
+ * Summary: Puts a JetScopePulse back to its starting state, ready to listen.
  * Parameters:
- *   - b: The beat detector to set up.
+ *   - p: The detector to set up. NULL is ignored.
  * Returns: Nothing.
  * Include: jet_scope.h
- * Notes: It sets the Geiss defaults: big_beat_threshold to 1.10, and silence_floor to the normalised silence floor, JET_SCOPE_BEAT_SILENCE_FLOOR. Call it once in _init, or again to start afresh after the song changes.
+ * Notes: It clears everything the detector has learnt and sets silence_db to JET_SCOPE_PULSE_SILENCE_DB_DEFAULT. Call it once in _init, or again to start afresh, after a change of song for instance; without one, the detector follows a new song's tempo by itself within a few seconds.
  * Example:
- *   static JetScopeBeat beat;
- *   jet_scope_beat_init(&beat);
+ *   static JetScopePulse pulse;
+ *   jet_scope_pulse_init(&pulse);
  */
-void jet_scope_beat_init(JetScopeBeat* b);
+void jet_scope_pulse_init(JetScopePulse* p);
 
 /**
- * Function: jet_scope_beat_tick
- * Summary: Feeds the beat detector this tick's volume and moves it forward one tick.
+ * Function: jet_scope_pulse_tick
+ * Summary: Listens to every frame of sound the host has written since the last call, and brings the detector's answers up to date.
  * Parameters:
- *   - b: The beat detector.
- *   - vol: This tick's volume, in normalised sample units. The Geiss way is to use half the peak-to-peak of the tick's mono frames, that is, half the distance from the lowest sample to the highest.
- *   - tick_hz: Your tick rate, in ticks a second: JET_GUEST_TICK_HZ for a normal cartridge. Every rate inside the detector is rescaled from the 30 Hz reference for you.
- * Returns: Nothing. The results are in the fields: beat_mode (a steady beat is on), big_beat (this tick is a standout hit), brightness (a flash amount from 0 to 1), beat_strength, and the three avg_ smoothed volumes.
+ *   - p: The detector, set up with jet_scope_pulse_init.
+ * Returns: Nothing. The answers are in the fields: onset, accent, flux, band_flux, beat, phase, bpm, confidence and steady.
  * Include: jet_scope.h
- * Notes: The arithmetic follows the Geiss code exactly. The smoothed volumes are rescaled with jet_scope_env_rate, and the volume history is thinned to its 30 entries a second, so the thresholds (on above 109 and off below 71 for beat_mode, 1.10 for a big beat) behave the same at any tick rate. Three lines make a game pulse to its music:
+ * Notes: Call it once in every _update. The first call starts listening from the newest frames. If the cartridge stalls for longer than the scope's ring holds, about 171 ms, the oldest of the missed frames are gone and the detector carries on from the ones still there. With no scope, or a host too old to write one, it does nothing and steady stays false.
  * Example:
- *   float vol = jet_scope_peak((uint32_t)(jet_scope_sample_rate() / 120));
- *   jet_scope_beat_tick(&beat, vol, JET_GUEST_TICK_HZ);
- *   if (beat.big_beat) kick_background_pulse();
+ *   jet_scope_pulse_tick(&pulse);
+ *   if (pulse.onset) spawn_sparks(pulse.accent);
  */
-void jet_scope_beat_tick(JetScopeBeat* b, float vol, float tick_hz);
+void jet_scope_pulse_tick(JetScopePulse* p);
+
+/**
+ * Function: jet_scope_pulse_feed
+ * Summary: Gives the detector samples of your own to listen to, instead of the scope's: a sound you are generating, or one read some other way.
+ * Parameters:
+ *   - p: The detector, set up with jet_scope_pulse_init.
+ *   - mono: The samples, oldest first, each normally between -1 and 1.
+ *   - n: How many samples there are.
+ *   - sample_rate: Their rate in samples a second, for example 48000. 0 ignores the call. A new rate tunes the filters afresh and starts the detector over.
+ * Returns: Nothing. The answers are in the fields, exactly as jet_scope_pulse_tick leaves them.
+ * Include: jet_scope.h
+ * Notes: jet_scope_pulse_tick is this call fed with the scope's newest frames. Feed each sample once, in order: the answers describe the samples of this call, so onset and beat are cleared at its start. Do not mix it with jet_scope_pulse_tick on the same detector.
+ * Example:
+ *   jet_scope_pulse_feed(&pulse, my_synth_out, 400, 48000);
+ */
+void jet_scope_pulse_feed(JetScopePulse* p, const float* mono, uint32_t n, uint32_t sample_rate);
 
 #endif // JET_SCOPE_H

@@ -114,7 +114,7 @@
 //
 // THE PROBLEM IT REPLACES: today every cart hand-rolls its own pool as a fixed
 // array plus a `bool active` flag, and spawning does an O(n) linear scan for the
-// first free slot (see carts/asteroids/bullets.c, carts/asteroids/particles.c).
+// first free slot.
 // At bullet-hell spawn rates that O(n)-per-spawn becomes O(n^2) per frame, and
 // the pattern is copy-pasted across carts. This module is the one well-crafted
 // replacement: O(1) alloc, O(1) free, dense O(active_count) iteration.

@@ -41,8 +41,8 @@
 // serves, with a level select, a soft keyboard or a map on it. A household
 // high-score board that any machine on the LAN can POST a score to. A live page
 // showing what the game is doing right now. A door game that other players dial
-// into. See carts/scoreboard for the whole shape of one, and
-// docs/networking/design.md sections 5.5 and 10.
+// into. See docs/networking/design.md sections 5.5 and 10 for the whole shape
+// of one.
 //
 // ----------------------------------------------------------------------------
 // NATIVE ONLY, AND IT SAYS SO

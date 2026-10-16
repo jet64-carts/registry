@@ -30,7 +30,7 @@
 //     words, a level's seed, anything that must arrive whole and in order.
 //
 // <nocodex>
-// WHY THIS MODULE EXISTS (docs/dgalaga/networking_report.md §4.2 B3, §7.1). A
+// WHY THIS MODULE EXISTS (docs/networking/rtc.md §1). A
 // browser has exactly one way to talk to another computer directly, WebRTC, and
 // exactly one unreliable transport, its data channel; a WebSocket is a relayed
 // TCP stream whose one lost packet holds up everything behind it. And WebRTC's

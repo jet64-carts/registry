@@ -271,7 +271,7 @@ typedef struct {
     uint8_t  reserved[16]; // +48 to 64
 } JetPcmChannel;
 
-// ===== AUDIO SCOPE block (a tap on the mixed master bus; see docs/jetamp/design.md section 2) =====
+// ===== AUDIO SCOPE block (a tap on the mixed master bus; see docs/architecture.md, the memory map) =====
 // A ring buffer, written by the HOST, holding the final mixed sound: the
 // machine's oscilloscope tap. On every audio buffer, in all three runtimes,
 // the mixer publishes stereo frames here as pairs of f32 numbers (left, right),
@@ -344,7 +344,7 @@ typedef struct {
     uint8_t  reserved[34];    // +30 to 64
 } JetScopeHeader;
 
-// ===== AUDIO EQ block (the cartridge's control of the master EQ; docs/jetamp/design.md section 5.6) =====
+// ===== AUDIO EQ block (the cartridge's control of the master EQ; docs/architecture.md, the memory map) =====
 // The cartridge's side of the host's 10-band master graphic EQ, the tone
 // control that boosts or cuts ten bands of the sound (peaking biquad filters
 // at the ISO octave centres, 31 Hz to 16 kHz). The CARTRIDGE owns the block:

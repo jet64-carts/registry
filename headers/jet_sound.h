@@ -47,9 +47,8 @@
 // a live host which sounds are resident — and which channel a sound lands on —
 // may differ between two runs of one scenario; what a cart can observe through
 // the simulation does not. A headless run mixes nothing, so it is exact.
-// JetQuest's own arena (its audio/cache.h, L352) is this module's ancestor —
-// these laws with a computed hold in place of law 2 — and since its ledger's
-// L512 JetQuest plays through this module instead.
+// A cart's own arena was this module's ancestor: these laws, with a computed
+// hold in place of law 2.
 // </nocodex>
 //
 // Play as many recordings as your game has, without loading them all. A game
