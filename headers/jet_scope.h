@@ -206,16 +206,19 @@ uint32_t jet_scope_output_latency_frames(void);
  * Function: jet_scope_row_anchor
  * Summary: Tells you exactly which frame the music's newest row started on, and which row it was. A row is one step of a tracker song.
  * Parameters:
- *   - out_head: Filled in with the scope's frame count at the moment the row was mixed: the frame that carries the row's first sample. May be NULL if you do not want it.
+ *   - out_head: Filled in with the number of the frame that carries the row's first sample, counted the way jet_scope_head counts. It can run a little ahead of jet_scope_head for a moment; see Notes. May be NULL if you do not want it.
  *   - out_pattern: Filled in with the row's position in the song's order list, that is, which pattern the song was on. May be NULL.
  *   - out_line: Filled in with the row's line number inside that pattern. May be NULL.
  * Returns: true when the host publishes this anchor (the E2 extension); false on an older host, in which case the outputs are left untouched.
  * Include: jet_scope.h
- * Notes: This ties the song's time to the scope's time to the exact sample. Subtract out_head from jet_scope_head, in unsigned arithmetic so the wrap does no harm, to find how many frames the mixer has produced since the row began; take off jet_scope_output_latency_frames as well to find when the row reaches the speakers. The anchor carries its own row numbers, so you can never pair an old frame count with a new row; if the host commits a new row while you are reading, the read tries again by itself. Before a song's first row, all three values read zero.
+ * Notes: This ties the song's time to the scope's time to the exact sample. Subtract out_head from jet_scope_head, in unsigned arithmetic so the counter wrapping round does no harm, to find how many frames the mixer has produced since the row began; take off jet_scope_output_latency_frames as well to find when the row reaches the speakers. The host stamps the anchor while it is still mixing the sound that carries the row, and moves jet_scope_head on only when that mix is done. So for a moment out_head can be ahead of jet_scope_head, and the difference then wraps to about four billion frames, which is a day of sound. Treat a difference of 0x80000000 or more as "not mixed yet" and look again next tick, when it will be small. The anchor carries its own row numbers, so you can never pair an old frame count with a new row; if the host commits a new row while you are reading, the read tries again by itself. Before a song's first row, all three values read zero.
  * Example:
  *   uint32_t at; uint8_t order, row;
  *   if (jet_scope_row_anchor(&at, &order, &row)) {
  *       uint32_t age = jet_scope_head() - at; // frames since the commit
+ *       if (age < 0x80000000u) {
+ *           // the row is mixed: it began age frames ago
+ *       }
  *   }
  */
 bool jet_scope_row_anchor(uint32_t* out_head, uint8_t* out_pattern, uint8_t* out_line);
