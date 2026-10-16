@@ -119,9 +119,9 @@
 // uses only what it exposes.
 //
 // THE PROBLEM IT REPLACES: today every cart that asks "what is near this point?"
-// does a brute-force O(n^2) pairwise distance sweep — carts/asteroids resolve
-// rock-on-rock collisions by testing every pair, and carts/swarm flocks 500
-// boids by having each boid scan all the others. That is fine at small n and
+// does a brute-force O(n^2) pairwise distance sweep — rock-on-rock collisions
+// resolved by testing every pair, or 500 flocking boids that each scan all the
+// others. That is fine at small n and
 // quadratic at large n. A spatial hash buckets points into a uniform grid so a
 // radius query only visits the handful of cells the query disc can touch,
 // turning a dense-field neighbour search from O(n^2) into ~O(n).

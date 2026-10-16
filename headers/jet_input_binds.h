@@ -26,9 +26,8 @@
 //   void _update(float dt) { if (jet_terminal_update(dt)) return; ... }
 //   void _draw(void)       { ... jet_terminal_draw(); }
 //
-// (carts/jetrunner is the smallest worked example: O opens the screen, and a
-// controller's SELECT opens it on that controller's page with
-// jet_bind_open_ui_pad.) Bindings themselves cost a cartridge nothing extra:
+// (The smallest shape: O opens the screen, and a controller's SELECT opens it
+// on that controller's page with jet_bind_open_ui_pad.) Bindings themselves cost a cartridge nothing extra:
 // they are firmware, and btn()/btnp() read them. The screen is the part that
 // arrives with the terminal.
 //

@@ -17,7 +17,7 @@
 // this header, and the exporter keys the players' window watch and the web
 // player's background ticking off the very same signal — so a cart that never
 // asks costs nothing, and a web page that never asks still sleeps the moment it
-// is hidden (docs/networking/design.md §14, docs/dgalaga/networking_report.md H10).
+// is hidden (docs/networking/design.md §14).
 // </nocodex>
 //
 // What it is for: a game that stops politely. A single-player game can pause

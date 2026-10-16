@@ -243,10 +243,6 @@ symbols = [
     "JET_PLATFORM_WINDOWS",
     "JET_POOL_HANDLE_NULL",
     "JET_POOL_INVALID_INDEX",
-    "JET_SCOPE_BEAT_REF_HZ",
-    "JET_SCOPE_BEAT_SILENCE_FLOOR",
-    "JET_SCOPE_BEAT_TAPE_N",
-    "JET_SCOPE_BIG_BEAT_THRESHOLD_DEFAULT",
     "JET_SFONT_COLOR_KEY",
     "JET_SFONT_DEFAULTS",
     "JET_SFONT_FOLD_UPPER",
@@ -317,9 +313,7 @@ symbols = [
     "JetRedrawCallback",
     "JetRedrawTracker",
     "JetRgb",
-    "JetScopeBeat",
     "JetScopeHeader",
-    "JetScopeTrigger",
     "JetSpatialHash",
     "JetSpatialHashCallback",
     "JetSpriteFontDef",
@@ -730,8 +724,6 @@ symbols = [
     "jet_resume_mod",
     "jet_rgb",
     "jet_scope_available",
-    "jet_scope_beat_init",
-    "jet_scope_beat_tick",
     "jet_scope_env_rate",
     "jet_scope_head",
     "jet_scope_output_latency_frames",
@@ -741,7 +733,6 @@ symbols = [
     "jet_scope_rms",
     "jet_scope_row_anchor",
     "jet_scope_sample_rate",
-    "jet_scope_trigger",
     "jet_seek_mod",
     "jet_set_buffering_mode",
     "jet_set_draw_target",
@@ -1328,4 +1319,19 @@ symbols = [
     "jet_sound_resident",
     "jet_sound_stats",
     "jet_sound_use_channels",
+]
+
+[[generation]]
+number = 15
+symbols = [
+    "JET_SCOPE_PULSE_BANDS",
+    "JET_SCOPE_PULSE_HISTORY",
+    "JET_SCOPE_PULSE_SILENCE_DB_DEFAULT",
+    "JET_SCOPE_SYNC_POINTS",
+    "JetScopePulse",
+    "JetScopeSync",
+    "jet_scope_pulse_feed",
+    "jet_scope_pulse_init",
+    "jet_scope_pulse_tick",
+    "jet_scope_sync",
 ]
