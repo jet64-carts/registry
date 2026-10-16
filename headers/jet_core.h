@@ -311,7 +311,7 @@ typedef struct {
  *   - flags: Status bits, made of the JET_SCOPE_FLAG_ names added together.
  *   - write_head: How many stereo frames the host has published in total. It only ever goes up.
  *   - output_latency_frames: The host's honest estimate of the delay from the mixer to the sound output (the DAC), in scope frames; 0 means it does not know. Only meaningful when JET_SCOPE_FLAG_LATENCY is set in flags.
- *   - bgm_row_head: The value write_head had at the instant the music engine last committed a pattern row. Only meaningful when JET_SCOPE_FLAG_ROW_ANCHOR is set in flags.
+ *   - bgm_row_head: The number of the frame that carries the first sample of the pattern row the music engine last committed, counted the way write_head counts. The host stamps it while it is still mixing that frame, so until the mix is published it can be ahead of write_head. Only meaningful when JET_SCOPE_FLAG_ROW_ANCHOR is set in flags.
  *   - bgm_row_pattern: The position in the song order of that committed row.
  *   - bgm_row_line: The row's place within its pattern.
  *   - reserved: Spare bytes. The host owns them.
@@ -338,7 +338,7 @@ typedef struct {
     // E2 (flag ROW_ANCHOR): ties chart time to ring time, sample-exactly. The
     // host stores the row identity first and the head last, once per row
     // commit (fewer than ten times a second), never in the per-frame mix loop.
-    uint32_t bgm_row_head;    // +24 write_head at the last BGM row commit
+    uint32_t bgm_row_head;    // +24 the frame carrying the last BGM row commit's first sample
     uint8_t  bgm_row_pattern; // +28 song-order position of that row
     uint8_t  bgm_row_line;    // +29 row within its pattern
     uint8_t  reserved[34];    // +30 to 64
