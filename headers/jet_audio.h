@@ -17,7 +17,8 @@
 // a note that holds until you let it go, and jet_play_mod for music.
 //
 // A sound plays on a channel, one of 16 voices numbered 0 to 15, and a channel
-// plays one sound at a time. The calls that pick a channel for you use 0 to 14
+// plays one sound at a time. The calls that pick a channel for you use 0 to 14,
+// give a new sound a channel that has gone quiet before one still sounding,
 // and never touch channel 15, so your cartridge can keep a sound of its own
 // there, an engine hum say, that no other sound will ever take over. To stop
 // or release one particular sound later, take a handle for it with
@@ -202,7 +203,7 @@ extern volatile JetAudioEqBlock* AUDIO_EQ;
  *   - sfx_id: The patch number in the cartridge's bank, from 0 to 255.
  * Returns: The channel the sound is playing on, from 0 to 14, or -1 if the sound was dropped because this patch had already started as many times this frame as jet_sfx_set_limit allows.
  * Include: jet_audio.h
- * Notes: The sound plays at the pitch and volume saved in the patch, centred between the speakers. The runtime hands out channels 0 to 14 in turn, so a new sound may take over a channel that an older sound is still using. Channel 15 is never picked, so it stays free for a sound you place yourself with jet_sfx_play_on. To stop or release this one sound later, call jet_sfx_handle on the channel number straight away; the bare channel number may be given to another sound before you get to it.
+ * Notes: The sound plays at the pitch and volume saved in the patch, centred between the speakers. The runtime gives it a channel from 0 to 14 whose sound has ended, looking first at the one after the channel it gave last. Only when all fifteen are still sounding does the new sound take over a channel, and then it takes the one sounding quietest, never one started in this same frame unless every one was. A channel you play by hand with jet_sfx_play_on is passed by in the same way while its sound lasts. Channel 15 is never picked, so it stays free for a sound you place yourself with jet_sfx_play_on. To stop or release this one sound later, call jet_sfx_handle on the channel number straight away; the bare channel number may be given to another sound before you get to it.
  * Example:
  *   int channel = jet_sfx_play(4);
  *   if (channel >= 0) { } // the sound was sent to a channel
